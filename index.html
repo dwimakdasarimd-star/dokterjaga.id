@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#2b3342">
+<title>Dokter Jaga — MedCalc</title>
+<style>
+:root{--bg:#2b3342;--panel:#343d4e;--text:#f0f0ee;--muted:#aeb6c3;--accent:#69d2e7;--lime:#b6e36b;--yellow:#f4ce62;--danger:#ff8d8d}
+*{box-sizing:border-box}body{margin:0;font-family:Archivo,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select{font:inherit}button{cursor:pointer}.app{min-height:100vh;max-width:1100px;margin:auto;padding:20px}
+header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px}.brand{font-weight:800;letter-spacing:-.03em}.brand span{color:var(--accent)}.sub{font-size:13px;color:var(--muted);margin-top:3px}
+.tabs{display:flex;gap:8px;overflow:auto;padding-bottom:8px}.tab{background:transparent;color:var(--muted);border:1px solid #4a5567;padding:10px 14px;border-radius:999px}.tab.active{color:var(--bg);background:var(--text);border-color:var(--text)}
+.hero{padding:22px 0 14px}.hero h1{font-size:clamp(28px,6vw,48px);line-height:1;margin:0 0 10px;letter-spacing:-.04em}.hero p{color:var(--muted);max-width:680px}
+.controls{display:grid;grid-template-columns:1fr auto;gap:12px;margin:16px 0}.search,.select{background:#30394a;color:var(--text);border:1px solid #4a5567;padding:13px 14px;border-radius:14px;outline:none}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{background:var(--panel);border:1px solid #465164;border-radius:16px;padding:16px}.card h3{margin:0 0 6px;font-size:16px}.card p{margin:0;color:var(--muted);font-size:13px;min-height:34px}.tag{display:inline-block;font-size:11px;margin-top:12px;color:var(--accent)}
+.modal{position:fixed;inset:0;background:rgba(10,14,20,.72);display:none;align-items:flex-end;justify-content:center;padding:14px}.modal.open{display:flex}.sheet{width:min(680px,100%);max-height:90vh;overflow:auto;background:#30394a;border:1px solid #4d5a6f;padding:20px;border-radius:22px 22px 14px 14px}.sheet h2{margin-top:0}.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:grid;gap:7px}.field.full{grid-column:1/-1}.field label{font-size:12px;color:var(--muted)}.field input,.field select{background:#252d3b;border:1px solid #4a5567;color:var(--text);padding:12px;border-radius:12px}.actions{display:flex;gap:10px;margin-top:16px}.primary,.secondary{border:0;padding:12px 15px;border-radius:12px}.primary{background:var(--accent);color:#17202b}.secondary{background:#465164;color:var(--text)}.result{margin-top:16px;border:1px solid #516075;background:#27303f;border-radius:14px;padding:15px}.result .value{font-size:30px;font-weight:800}.result small{color:var(--muted)}.history{margin-top:20px}.history-item{padding:12px 0;border-bottom:1px solid #414b5d;font-size:13px}.notice{margin-top:20px;font-size:11px;color:var(--muted);line-height:1.5}
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.app{padding:16px}.controls{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.form{grid-template-columns:1fr}.field.full{grid-column:auto}}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div><div class="brand">dokter<span>jaga</span></div><div class="sub">Clinical tools for on-call doctors</div></div><div style="font-size:12px;color:var(--muted)">MedCalc V2</div></header>
+<div class="tabs"><button class="tab active" data-cat="all">Semua</button><button class="tab" data-cat="Basics">Basics</button><button class="tab" data-cat="Renal">Renal</button><button class="tab" data-cat="Electrolytes">Electrolytes</button><button class="tab" data-cat="Resusitasi">Resusitasi</button><button class="tab" data-cat="Scores">Scores</button></div>
+<section class="hero"><h1>MedCalc</h1><p>Kalkulator medis cepat untuk membantu perhitungan klinis saat jaga. Hasil harus ditinjau bersama konteks klinis dan pedoman setempat.</p></section>
+<div class="controls"><input id="search" class="search" placeholder="Cari kalkulator…"><select id="sort" class="select"><option value="name">Urutkan nama</option><option value="cat">Urutkan kategori</option></select></div>
+<div id="grid" class="grid"></div>
+<div class="history"><h3 style="margin-bottom:6px">Riwayat terbaru</h3><div id="historyList"></div></div>
+<div class="notice">Informasi edukasi/alat bantu keputusan. Bukan pengganti penilaian klinis, guideline, atau konsultasi spesialis. Pastikan satuan dan input benar sebelum digunakan.</div>
+</div>
+<div id="modal" class="modal"><div class="sheet"><h2 id="mTitle"></h2><div id="formWrap"></div><div id="res" class="result" style="display:none"></div><div class="actions"><button class="secondary" id="close">Tutup</button><button class="primary" id="calc">Hitung</button></div></div></div>
+<script>
+const calcs=[
+{name:'BMI',cat:'Basics',desc:'Indeks massa tubuh',fields:['weight','height'],calc:v=>(v.weight/((v.height/100)**2)).toFixed(1)+' kg/m²'},
+{name:'BSA — Mosteller',cat:'Basics',desc:'Luas permukaan tubuh',fields:['weight','height'],calc:v=>Math.sqrt(v.weight*v.height/3600).toFixed(2)+' m²'},
+{name:'MAP',cat:'Basics',desc:'Mean arterial pressure',fields:['sbp','dbp'],calc:v=>(v.dbp+(v.sbp-v.dbp)/3).toFixed(1)+' mmHg'},
+{name:'Cockcroft–Gault',cat:'Renal',desc:'Creatinine clearance',fields:['age','sex','weight','scr'],calc:v=>(((140-v.age)*v.weight)/(72*v.scr)*(v.sex==='female'?.85:1)).toFixed(1)+' mL/min'},
+{name:'eGFR — CKD-EPI 2021',cat:'Renal',desc:'Estimasi GFR tanpa ras',fields:['age','sex','scr'],calc:v=>{let k=v.sex==='female'?.7:.9,a=v.sex==='female'?-0.241:-0.302;return (142*Math.min(v.scr/k,1)**a*Math.max(v.scr/k,1)**-1.2*.9938**v.age*(v.sex==='female'?1.012:1)).toFixed(1)+' mL/min/1.73m²'}},
+{name:'Anion Gap',cat:'Electrolytes',desc:'AG dari elektrolit serum',fields:['na','cl','hco3'],calc:v=>(v.na-v.cl-v.hco3).toFixed(1)+' mEq/L'},
+{name:'Na terkoreksi',cat:'Electrolytes',desc:'Koreksi hiperglikemia',fields:['na','glucose'],calc:v=>(v.na+1.6*((v.glucose-100)/100)).toFixed(1)+' mEq/L'},
+{name:'Ca terkoreksi albumin',cat:'Electrolytes',desc:'Corrected calcium',fields:['ca','albumin'],calc:v=>(v.ca+0.8*(4-v.albumin)).toFixed(2)+' mg/dL'},
+{name:'Maintenance Fluid 4–2–1',cat:'Resusitasi',desc:'Laju cairan maintenance',fields:['weight'],calc:v=>{let w=v.weight;let r=w<=10?4*w:w<=20?40+2*(w-10):60+1*(w-20);return r.toFixed(0)+' mL/jam'}},
+{name:'Shock Index',cat:'Resusitasi',desc:'HR / SBP',fields:['hr','sbp'],calc:v=>(v.hr/v.sbp).toFixed(2)},
+{name:'GCS Total',cat:'Scores',desc:'Eye + Verbal + Motor',fields:['eye','verbal','motor'],calc:v=>(v.eye+v.verbal+v.motor)+' / 15'},
+{name:'qSOFA',cat:'Scores',desc:'Respiratory rate, SBP, mentation',fields:['rr','sbp','ment'],calc:v=>((v.rr>=22?1:0)+(v.sbp<=100?1:0)+(v.ment==='altered'?1:0))+' / 3'}
+];
+const labels={weight:['Berat badan','kg'],height:['Tinggi','cm'],sbp:['Sistolik','mmHg'],dbp:['Diastolik','mmHg'],age:['Usia','tahun'],scr:['Serum kreatinin','mg/dL'],na:['Na','mEq/L'],cl:['Cl','mEq/L'],hco3:['HCO₃','mEq/L'],glucose:['Glukosa','mg/dL'],ca:['Kalsium total','mg/dL'],albumin:['Albumin','g/dL'],hr:['Heart rate','bpm'],eye:['Eye','score 1–4'],verbal:['Verbal','score 1–5'],motor:['Motor','score 1–6'],rr:['Respiratory rate','/menit']};
+let active=calcs[0], cat='all';
+function render(){let q=document.querySelector('#search').value.toLowerCase(), s=document.querySelector('#sort').value;let arr=calcs.filter(c=>(cat==='all'||c.cat===cat)&&c.name.toLowerCase().includes(q));arr.sort((a,b)=>(s==='cat'?a.cat.localeCompare(b.cat)||a.name.localeCompare(b.name):a.name.localeCompare(b.name)));document.querySelector('#grid').innerHTML=arr.map((c,i)=>'<button class="card" data-i="'+calcs.indexOf(c)+'"><h3>'+c.name+'</h3><p>'+c.desc+'</p><span class="tag">'+c.cat+'</span></button>').join('');document.querySelectorAll('.card').forEach(b=>b.onclick=()=>openCalc(calcs[+b.dataset.i]));}
+function field(k){if(k==='sex')return '<div class="field"><label>Jenis kelamin</label><select id="f-sex"><option value="male">Laki-laki</option><option value="female">Perempuan</option></select></div>';if(k==='ment')return '<div class="field"><label>Mentasi</label><select id="f-ment"><option value="normal">Normal</option><option value="altered">Altered</option></select></div>';let [a,u]=labels[k]||[k,''];return '<div class="field"><label>'+a+' <span style="color:#8490a1">('+u+')</span></label><input id="f-'+k+'" type="number" step="any" inputmode="decimal"></div>'}
+function openCalc(c){active=c;document.querySelector('#mTitle').textContent=c.name;document.querySelector('#formWrap').innerHTML='<div class="form">'+c.fields.map(field).join('')+(c.name.includes('Cockcroft')||c.name.includes('eGFR')?field('sex'):'')+'</div>';document.querySelector('#res').style.display='none';document.querySelector('#modal').classList.add('open');}
+function num(id){let e=document.querySelector('#f-'+id);return e?parseFloat(e.value):NaN}
+document.querySelector('#calc').onclick=()=>{let v={};active.fields.forEach(k=>v[k]=num(k));if(active.name.includes('Cockcroft')||active.name.includes('eGFR'))v.sex=document.querySelector('#f-sex').value;if(v.sex===undefined&&active.name.includes('eGFR'))v.sex='male';if(active.name==='qSOFA')v.ment=document.querySelector('#f-ment').value;if(Object.values(v).some(x=>typeof x==='number'&&Number.isNaN(x))){alert('Lengkapi semua input.');return}let out=active.calc(v);document.querySelector('#res').style.display='block';document.querySelector('#res').innerHTML='<small>Hasil</small><div class="value">'+out+'</div>';let h=JSON.parse(localStorage.getItem('medcalc-history')||'[]');h.unshift({name:active.name,out,at:new Date().toLocaleString('id-ID')});localStorage.setItem('medcalc-history',JSON.stringify(h.slice(0,10)));renderHistory();};
+document.querySelector('#close').onclick=()=>document.querySelector('#modal').classList.remove('open');document.querySelector('#modal').onclick=e=>{if(e.target.id==='modal')e.currentTarget.classList.remove('open')};
+document.querySelector('#search').oninput=render;document.querySelector('#sort').onchange=render;document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');cat=t.dataset.cat;render()});
+function renderHistory(){let h=JSON.parse(localStorage.getItem('medcalc-history')||'[]');document.querySelector('#historyList').innerHTML=h.length?h.map(x=>'<div class="history-item"><b>'+x.name+'</b> — '+x.out+'<div style="color:#7e8a9b">'+x.at+'</div></div>').join(''):'<div style="color:#7e8a9b;font-size:13px">Belum ada hasil.</div>'}
+render();renderHistory();
+</script>
+</body>
+</html>
